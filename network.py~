@@ -1,0 +1,128 @@
+import lasagne
+from lasagne.layers.shape import * 
+from lasagne.layers import *
+from lasagne.nonlinearities import softmax
+
+import sys
+sys.path.append('/usr/lib/python2.7/dist-packages/')
+import time
+import random
+import os
+import h5py
+import math
+from scipy.misc import imresize
+import numpy as np
+import matplotlib.pyplot as plt
+
+import theano
+import theano.tensor as T
+s = time.time()
+Bac =10
+Ts = 10
+C=1
+W=120
+H=180
+def get_net():
+net = {}
+net['input'] = InputLayer(shape=(Bac, C, Ts, W, H)) #3D CONV STYLE
+print "input output",net['input'].output_shape
+net['input_reshaped']=ReshapeLayer(net['input'],([0], [2],[1], [3], [4]))
+
+net['input1_slice1'] =SliceLayer(net['input_reshaped'], indices=slice(0, 1), axis=1)
+net['input1_slice1']=ReshapeLayer(net['input1_slice1'], tuple([Bac*net['input1_slice1'].output_shape[1]]+list(net['input1_slice1'].output_shape[2:])))
+
+net['input1_slice2'] =SliceLayer(net['input_reshaped'], indices=slice(1, 2), axis=1)
+net['input1_slice2']=ReshapeLayer(net['input1_slice2'], tuple([Bac*net['input1_slice2'].output_shape[1]]+list(net['input1_slice2'].output_shape[2:])))
+
+net['input1_slice3'] =SliceLayer(net['input_reshaped'], indices=slice(2, 3), axis=1)
+net['input1_slice3']=ReshapeLayer(net['input1_slice3'], tuple([Bac*net['input1_slice3'].output_shape[1]]+list(net['input1_slice3'].output_shape[2:])))
+
+net['input1_slice4'] =SliceLayer(net['input_reshaped'], indices=slice(3, 4), axis=1)
+net['input1_slice4']=ReshapeLayer(net['input1_slice4'], tuple([Bac*net['input1_slice4'].output_shape[1]]+list(net['input1_slice4'].output_shape[2:])))
+
+net['input1_slice5'] =SliceLayer(net['input_reshaped'], indices=slice(4, 5), axis=1)
+net['input1_slice5']=ReshapeLayer(net['input1_slice5'], tuple([Bac*net['input1_slice5'].output_shape[1]]+list(net['input1_slice5'].output_shape[2:])))
+
+net['input1_slice6'] =SliceLayer(net['input_reshaped'], indices=slice(5, 6), axis=1)
+net['input1_slice6']=ReshapeLayer(net['input1_slice6'], tuple([Bac*net['input1_slice6'].output_shape[1]]+list(net['input1_slice6'].output_shape[2:])))
+
+net['input1_slice7'] =SliceLayer(net['input_reshaped'], indices=slice(6, 7), axis=1)
+net['input1_slice7']=ReshapeLayer(net['input1_slice7'], tuple([Bac*net['input1_slice7'].output_shape[1]]+list(net['input1_slice7'].output_shape[2:])))
+
+net['input1_slice8'] =SliceLayer(net['input_reshaped'], indices=slice(7, 8), axis=1)
+net['input1_slice8']=ReshapeLayer(net['input1_slice8'], tuple([Bac*net['input1_slice8'].output_shape[1]]+list(net['input1_slice8'].output_shape[2:])))
+
+net['input1_slice9'] =SliceLayer(net['input_reshaped'], indices=slice(8, 9), axis=1)
+net['input1_slice9']=ReshapeLayer(net['input1_slice9'], tuple([Bac*net['input1_slice9'].output_shape[1]]+list(net['input1_slice9'].output_shape[2:])))
+
+net['input1_slice10'] =SliceLayer(net['input_reshaped'], indices=slice(9, None), axis=1)
+net['input1_slice10']=ReshapeLayer(net['input1_slice10'], tuple([Bac*net['input1_slice10'].output_shape[1]]+list(net['input1_slice10'].output_shape[2:])))
+
+net['conv1'] =  Conv2DLayer(net['input1_slice1'], 64, 3, stride=1, pad=0) 
+print "conv1 output",net['conv1'].output_shape
+
+net['conv2'] = Conv2DLayer(net['conv1'], 128, 5, stride=2, pad=0)
+net['pool3']=MaxPool2DLayer(net['conv2'],3)
+net['conv3'] = Conv2DLayer(net['pool3'], 256, 3, stride=1, pad=0)
+net['pool4']=MaxPool2DLayer(net['conv3'],3)
+net['pool4'].output_shape
+#AE_reconstruct
+print net['pool4'].output_shape
+net['AE_conv1'] = lasagne.layers.Conv2DLayer(net['pool4'], 128, 5,nonlinearity=lasagne.nonlinearities.tanh)
+net['AE_pool1'] = lasagne.layers.MaxPool2DLayer(net['AE_conv1'],  3)
+net['AE_conv2'] = lasagne.layers.Conv2DLayer(net['AE_pool1'], 32, 3,pad=1,nonlinearity=lasagne.nonlinearities.tanh)
+net['AE_pool2'] = lasagne.layers.MaxPool2DLayer(net['AE_conv2'], 3)
+net['AE_conv3'] = lasagne.layers.Conv2DLayer(net['AE_pool2'], 16, 3,pad=1,nonlinearity=lasagne.nonlinearities.tanh)
+net['AE_deconv4'] = TransposedConv2DLayer(net['AE_conv3'], 32, 3,crop=1,nonlinearity=lasagne.nonlinearities.tanh)
+net['AE_uppool4'] = lasagne.layers.Upscale2DLayer(net['AE_deconv4'], 3)
+net['AE_deconv5'] = TransposedConv2DLayer(net['AE_conv2'], 128, 3,crop=1,nonlinearity=lasagne.nonlinearities.tanh)
+net['AE_uppool5'] = lasagne.layers.Upscale2DLayer(net['AE_deconv5'], 3)
+net['AE_recon'] = TransposedConv2DLayer(net['AE_conv1'], 1, 5,nonlinearity=lasagne.nonlinearities.tanh)
+print "AE_conv1" ,net['AE_conv1'].output_shape
+print "AE_pool11" ,net['AE_pool1'].output_shape
+print "AE_conv2" ,net['AE_conv2'].output_shape
+print "AE_pool2" ,net['AE_pool2'].output_shape
+print "AE_conv3" ,net['AE_conv3'].output_shape
+print "AE_deconv4" ,net['AE_deconv4'].output_shape
+print "AE_uppool4" ,net['AE_uppool4'].output_shape
+print "AE_deconv5" ,net['AE_deconv5'].output_shape
+print "AE_uppool5" ,net['AE_uppool5'].output_shape
+print "AE_recon" ,net['AE_recon'].output_shape
+net_output = lasagne.layers.get_output( net['AE_recon'] )
+target_values=lasagne.layers.get_output( net['conv3'] )
+loss2 = lasagne.objectives.squared_error(net_output,target_values).mean()
+weightsl2 = lasagne.regularization.regularize_network_params(net['AE_recon'], lasagne.regularization.l2)
+loss2 += weightsl2*1e-5
+all_params2 = lasagne.layers.get_all_params( net['AE_recon']  ,trainable=True)
+(lr, mtm) = (0.001, 0.9)
+updates2 = lasagne.updates.nesterov_momentum(loss2, all_params2, learning_rate=lr, momentum=mtm)
+train2_fn =theano.function([net['input'].input_var], [net_output,target_values,loss2], updates=updates2)
+pred2 = lasagne.layers.get_output(net['AE_conv3'], deterministic=True)
+pred2_fn = theano.function([net['input'].input_var], pred2) 
+test2_fn = theano.function([net['input'].input_var], loss2) 	
+
+#video_reconstruct
+net['AE_recon_up']=lasagne.layers.Upscale2DLayer(net['AE_recon'],3)
+net['vid_recon1'] = TransposedConv2DLayer(net['conv3'],net['reshape'].output_shape[1], 3, crop=1)
+net['vid_recon2'] = TransposedConv2DLayer(net['conv2'],net['conv1'].output_shape[1], 3,crop=1)
+net['vid_recon3'] = TransposedConv2DLayer(net['conv1_s1'],1, 3,crop=1)
+net['vid_reshape'] = ReshapeLayer(net['vid_recon3'], (net['input'].output_shape[0],-1, [2], [3]))
+net['vid_recon4']=lasagne.layers.Conv2DLayer(net['vid_reshape'],10, 3,pad=1)
+net['vid_final']  =ReshapeLayer(net['vid_recon4'],(net['input'].output_shape[0],net['input'].output_shape[1],net['input'].output_shape[2],net['input'].output_shape[3],net['input'].output_shape[4]) )
+print "video reconstructed reshape" ,net['vid_final'].output_shape
+net_output_vidrecon= lasagne.layers.get_output( net['vid_final'] )
+target_values_vidrecon=lasagne.layers.get_output( net['input'] )
+loss3 = lasagne.objectives.squared_error(net_output_vidrecon,target_values_vidrecon).mean()
+weightsl3 = lasagne.regularization.regularize_network_params(net['vid_final'], lasagne.regularization.l2)
+loss3 += weightsl3*1e-5
+all_params3 = lasagne.layers.get_all_params( net['vid_final']  ,trainable=True)
+(lr, mtm) = (0.001, 0.9)
+updates3 = lasagne.updates.nesterov_momentum(loss3, all_params3, learning_rate=lr, momentum=mtm)
+train3_fn =theano.function([net['input'].input_var], [net_output_vidrecon,target_values_vidrecon,loss3], updates=updates3)
+pred3 = lasagne.layers.get_output(net['vid_final'], deterministic=True)
+pred3_fn = theano.function([net['input'].input_var], pred3) 
+test3_fn = theano.function([net['input'].input_var], loss3) 
+return net,train1_fn,test1_fn,train2_fn,test2_fn,train3_fn,test3_fn
+print('Network created in {:.2f}s'.format(time.time() - s))
+
+net,train1_fn,test1_fn,train2_fn,test2_fn,pred2_fn,pred2 = get_net()
